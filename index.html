@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <title>Арбитражный скринер  — прототип связок</title>
+  <title>Арбитражный скринер — прототип связок</title>
 
   <!-- Vue 3 -->
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
@@ -177,7 +177,7 @@
     }
     .title-input:disabled { opacity: 0.7; }
 
-    .header-edit-status {
+    .header-mode {
       display: flex;
       align-items: center;
       gap: 6px;
@@ -194,12 +194,6 @@
       color: #9ca3af;
       min-height: 18px;
     }
-    .header-buttons {
-      margin-left: auto;
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
 
     .pill-label { font-weight: 500; }
 
@@ -214,11 +208,29 @@
       border-bottom: 1px solid #1f2937;
       padding: 8px 12px;
       background: #020617;
-      min-height: 140px;
+      min-height: 160px;
       max-height: 60%;
       resize: vertical;
       overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
+
+    .editor-edit-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      flex-wrap: wrap;
+    }
+    .editor-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-left: auto;
+    }
+
     .editor-label-row {
       display: flex;
       justify-content: space-between;
@@ -240,7 +252,6 @@
     }
     textarea.formula-editor:disabled { opacity: 0.6; }
     .editor-hint {
-      margin-top: 4px;
       font-size: 11px;
       color: #9ca3af;
     }
@@ -346,60 +357,24 @@
           v-model="selectedPair.title"
         />
 
-        <!-- Статус редактирования (Формула) рядом с названием -->
-        <div class="header-edit-status">
-          <span class="pill-label">Формула:</span>
+        <!-- Режим связки справа вверху -->
+        <div class="header-mode">
+          <span class="pill-label">Режим связки:</span>
           <span
             class="badge"
             :class="{
-              'badge-edit-published': editingStatus === 'Опубликована',
-              'badge-edit-draft': editingStatus === 'Черновик',
-              'badge-edit-preview': editingStatus === 'Предпросмотр'
+              'badge-status-online': selectedPair.status === 'Онлайн',
+              'badge-status-offline': selectedPair.status === 'Отключена',
+              'badge-status-error': selectedPair.status === 'Ошибка'
             }"
           >
-            {{ editingStatus }}
+            {{ selectedPair.status }}
           </span>
-        </div>
-
-        <div class="header-buttons">
-          <!-- Редактирование -->
-          <button
-            v-if="editingStatus === 'Опубликована'"
-            class="btn btn-secondary"
-            @click="startEditing"
-          >
-            ✏️ Редактировать
-          </button>
-
-          <button
-            v-if="editingStatus !== 'Опубликована'"
-            class="btn btn-secondary"
-            :disabled="!hasUnappliedChanges"
-            @click="applyPreview"
-          >
-            👁 Предпросмотр
-          </button>
-
-          <button
-            v-if="editingStatus !== 'Опубликована'"
-            class="btn btn-secondary"
-            @click="discardDraft"
-          >
-            ↩ Отменить
-          </button>
-
-          <button
-            v-if="editingStatus === 'Предпросмотр'"
-            class="btn"
-            @click="publishDraft"
-          >
-            ✅ Опубликовать
-          </button>
 
           <!-- Запуск связки -->
           <button
             v-if="['Отключена', 'Ошибка'].includes(selectedPair.status)"
-            class="btn"
+            class="btn btn-secondary"
             @click="startPair"
           >
             ▶ Запустить
@@ -423,6 +398,57 @@
     <section class="content">
       <!-- Редактор формулы -->
       <div class="editor-panel">
+        <!-- Статус редактирования + кнопки над формулой -->
+        <div class="editor-edit-row">
+          <span class="pill-label">Формула:</span>
+          <span
+            class="badge"
+            :class="{
+              'badge-edit-published': editingStatus === 'Опубликована',
+              'badge-edit-draft': editingStatus === 'Черновик',
+              'badge-edit-preview': editingStatus === 'Предпросмотр'
+            }"
+          >
+            {{ editingStatus }}
+          </span>
+
+          <div class="editor-buttons">
+            <!-- Редактирование -->
+            <button
+              v-if="editingStatus === 'Опубликована'"
+              class="btn btn-secondary"
+              @click="startEditing"
+            >
+              ✏️ Редактировать
+            </button>
+
+            <button
+              v-if="editingStatus !== 'Опубликована'"
+              class="btn btn-secondary"
+              :disabled="!hasUnappliedChanges"
+              @click="applyPreview"
+            >
+              👁 Предпросмотр
+            </button>
+
+            <button
+              v-if="editingStatus !== 'Опубликована'"
+              class="btn btn-secondary"
+              @click="discardDraft"
+            >
+              ↩ Отменить
+            </button>
+
+            <button
+              v-if="editingStatus === 'Предпросмотр'"
+              class="btn"
+              @click="publishDraft"
+            >
+              ✅ Опубликовать
+            </button>
+          </div>
+        </div>
+
         <div class="editor-label-row">
           <span>Формула связки</span>
           <span v-if="editingStatus === 'Опубликована'">
