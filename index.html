@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Арбитражный скринер — прототип связок</title>
+
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <!-- lightweight-charts -->
+  <script src="https://unpkg.com/lightweight-charts@4.1.1/dist/lightweight-charts.standalone.production.js"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+    }
+    body { display: flex; }
+
+    #app {
+      display: flex;
+      flex: 1;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Левая панель */
+    .sidebar {
+      background: #020617;
+      border-right: 1px solid #1e293b;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 220px;
+      max-width: 380px;
+      width: 260px;
+      resize: horizontal;
+      overflow: auto;
+    }
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #cbd5f5;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 12px;
+      cursor: pointer;
+      background: #1d4ed8;
+      color: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .btn-secondary { background: #1e293b; }
+    .btn-danger { background: #b91c1c; }
+
+    .pairs-list {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .pair-item {
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      background: rgba(15, 23, 42, 0.9);
+    }
+    .pair-item:hover { border-color: #334155; }
+    .pair-item.active {
+      border-color: #3b82f6;
+      background: rgba(15, 23, 42, 0.95);
+    }
+    .pair-name {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e5e7eb;
+    }
+    .pair-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 10px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    .badge-status-online {
+      background: rgba(22, 163, 74, 0.15);
+      color: #4ade80;
+    }
+    .badge-status-offline {
+      background: rgba(148, 163, 184, 0.15);
+      color: #e5e7eb;
+    }
+    .badge-status-error {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fb7185;
+    }
+    .badge-edit-published {
+      background: rgba(56, 189, 248, 0.15);
+      color: #7dd3fc;
+    }
+    .badge-edit-draft {
+      background: rgba(234, 179, 8, 0.15);
+      color: #facc15;
+    }
+    .badge-edit-preview {
+      background: rgba(129, 140, 248, 0.15);
+      color: #a5b4fc;
+    }
+
+    /* Правая панель */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .header {
+      padding: 10px 14px;
+      border-bottom: 1px solid #1f2937;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      background: #020617;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: nowrap;
+    }
+    .title-input {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #1f2937;
+      background: #020618;
+      color: #e5e7eb;
+    }
+    .title-input:disabled { opacity: 0.7; }
+
+    .header-edit-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .header-status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 12px;
+      color: #9ca3af;
+      min-height: 18px;
+    }
+    .header-buttons {
+      margin-left: auto;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .pill-label { font-weight: 500; }
+
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .editor-panel {
+      border-bottom: 1px solid #1f2937;
+      padding: 8px 12px;
+      background: #020617;
+      min-height: 140px;
+      max-height: 60%;
+      resize: vertical;
+      overflow: auto;
+    }
+    .editor-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #6b7280;
+      margin-bottom: 4px;
+    }
+    textarea.formula-editor {
+      width: 100%;
+      min-height: 80px;
+      border-radius: 6px;
+      border: 1px solid #1f2937;
+      background: #020618;
+      color: #e5e7eb;
+      padding: 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      resize: vertical;
+    }
+    textarea.formula-editor:disabled { opacity: 0.6; }
+    .editor-hint {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #9ca3af;
+    }
+
+    .chart-panel {
+      flex: 1;
+      position: relative;
+      background: #020617;
+    }
+    #chart {
+      position: absolute;
+      inset: 0;
+    }
+    .chart-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #9ca3af;
+      pointer-events: none;
+    }
+    .chart-top-label {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      font-size: 11px;
+      color: #9ca3af;
+      background: rgba(15, 23, 42, 0.8);
+      padding: 3px 6px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+    }
+    .chart-symbol-label {
+      position: absolute;
+      top: 6px;
+      left: 10px;
+      font-size: 11px;
+      color: #e5e7eb;
+      background: rgba(15, 23, 42, 0.9);
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+    }
+    .chart-loading {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: #9ca3af;
+      background: rgba(15, 23, 42, 0.5);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- Левая панель -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">Связки</div>
+      <button class="btn btn-secondary" @click="addPair">
+        + Новая
+      </button>
+    </div>
+
+    <div class="pairs-list">
+      <div
+        v-for="pair in pairs"
+        :key="pair.id"
+        class="pair-item"
+        :class="{ active: pair.id === selectedPairId }"
+        @click="selectPair(pair.id)"
+      >
+        <div class="pair-name">{{ pair.title }}</div>
+        <div class="pair-meta">
+          <span>График: {{ pair.symbol || '—' }}</span>
+          <span
+            class="badge"
+            :class="{
+              'badge-status-online': pair.status === 'Онлайн',
+              'badge-status-offline': pair.status === 'Отключена',
+              'badge-status-error': pair.status === 'Ошибка'
+            }"
+          >
+            {{ pair.status }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Правая панель -->
+  <main class="main" v-if="selectedPair">
+    <!-- Заголовок -->
+    <header class="header">
+      <div class="header-top">
+        <input
+          class="title-input"
+          v-model="selectedPair.title"
+        />
+
+        <!-- Статус редактирования (Формула) рядом с названием -->
+        <div class="header-edit-status">
+          <span class="pill-label">Формула:</span>
+          <span
+            class="badge"
+            :class="{
+              'badge-edit-published': editingStatus === 'Опубликована',
+              'badge-edit-draft': editingStatus === 'Черновик',
+              'badge-edit-preview': editingStatus === 'Предпросмотр'
+            }"
+          >
+            {{ editingStatus }}
+          </span>
+        </div>
+
+        <div class="header-buttons">
+          <!-- Редактирование -->
+          <button
+            v-if="editingStatus === 'Опубликована'"
+            class="btn btn-secondary"
+            @click="startEditing"
+          >
+            ✏️ Редактировать
+          </button>
+
+          <button
+            v-if="editingStatus !== 'Опубликована'"
+            class="btn btn-secondary"
+            :disabled="!hasUnappliedChanges"
+            @click="applyPreview"
+          >
+            👁 Предпросмотр
+          </button>
+
+          <button
+            v-if="editingStatus !== 'Опубликована'"
+            class="btn btn-secondary"
+            @click="discardDraft"
+          >
+            ↩ Отменить
+          </button>
+
+          <button
+            v-if="editingStatus === 'Предпросмотр'"
+            class="btn"
+            @click="publishDraft"
+          >
+            ✅ Опубликовать
+          </button>
+
+          <!-- Запуск связки -->
+          <button
+            v-if="['Отключена', 'Ошибка'].includes(selectedPair.status)"
+            class="btn"
+            @click="startPair"
+          >
+            ▶ Запустить
+          </button>
+        </div>
+      </div>
+
+      <div class="header-status-row">
+        <div v-if="editingStatus !== 'Опубликована'">
+          <span v-if="hasUnappliedChanges">
+            Изменения не применены к графику
+          </span>
+          <span v-else>
+            Изменения отображены на графике
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Контент: редактор + график -->
+    <section class="content">
+      <!-- Редактор формулы -->
+      <div class="editor-panel">
+        <div class="editor-label-row">
+          <span>Формула связки</span>
+          <span v-if="editingStatus === 'Опубликована'">
+            Режим просмотра. Нажмите «Редактировать» для изменений.
+          </span>
+        </div>
+        <textarea
+          class="formula-editor"
+          v-model="draftFormula"
+          :disabled="editingStatus === 'Опубликована'"
+        ></textarea>
+        <!-- важно: v-pre, чтобы Vue не парсил {{CRZ5}} -->
+        <div class="editor-hint" v-pre>
+          Пример плейсхолдеров: <code>{{CRZ5}}</code>, <code>{{CNYRUBF}}</code>.
+        </div>
+      </div>
+
+      <!-- График -->
+      <div class="chart-panel">
+        <div id="chart"></div>
+        <div class="chart-symbol-label" v-if="chartSymbolToShow">
+          {{ chartSymbolToShow }} (15m, Binance Futures)
+        </div>
+        <div class="chart-top-label">
+          График:
+          <span v-if="editingStatus === 'Опубликована'">Опубликована</span>
+          <span v-else-if="editingStatus === 'Черновик'">LIVE (последняя публикация)</span>
+          <span v-else>Предпросмотр</span>
+        </div>
+        <div class="chart-overlay" v-if="!chartSymbolToShow && !isChartLoading">
+          Выберите связку или выполните предпросмотр, чтобы загрузить данные.
+        </div>
+        <div class="chart-loading" v-if="isChartLoading">
+          Загрузка котировок {{ chartSymbolToShow }}...
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Если связка не выбрана -->
+  <main class="main" v-else>
+    <header class="header">
+      <div class="header-top">
+        <div class="sidebar-title">Нет выбранной связки</div>
+      </div>
+      <div class="header-status-row">
+        Выберите связку слева или создайте новую.
+      </div>
+    </header>
+    <section class="content">
+      <div class="chart-panel">
+        <div class="chart-overlay">
+          Нет выбранной связки.
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      pairs: [
+        {
+          id: 1,
+          title: 'CRZ5 / CNYRUBF',
+          status: 'Отключена',
+          formula: 'let spread = {{CRZ5}}/{{CNYRUBF}}',
+          symbol: 'BTCUSDT'
+        },
+        {
+          id: 2,
+          title: 'EDZ5 / EUZ5 / SIZ5',
+          status: 'Онлайн',
+          formula: 'let spread = {{EDZ5}} / ({{EUZ5}} * {{SIZ5}})',
+          symbol: 'ETHUSDT'
+        },
+        {
+          id: 3,
+          title: 'FX_EURUSD / CME_6EZ5',
+          status: 'Онлайн',
+          formula: 'let spread = {{FX_EURUSD}}/ {{CME_6EZ5}}',
+          symbol: 'XRPUSDT'
+        },
+        {
+          id: 4,
+          title: 'GLDRUBF - CME_GCZ5',
+          status: 'Ошибка',
+          formula: 'let spread = {{GLDRUBF}} - {{CME_GCZ5}}',
+          symbol: 'ONDOUSDT'
+        }
+      ],
+      randomTickers: [
+        'AWEUSDT',
+        'AXLUSDT',
+        'AXSUSDT',
+        'B2USDT',
+        'B3USDT',
+        'BABYUSDT',
+        'BANANAS31USDT',
+        'BANANAUSDT',
+        'BANDUSDT',
+        'BANKUSDT',
+        'BANUSDT',
+        'BARDUSDT',
+        'BASUSDT',
+        'BATUSDT',
+        'BBUSDT',
+        'BCHUSDC',
+        'BCHUSDT',
+        'BDXNUSDT'
+      ],
+      selectedPairId: 1,
+      editingStatus: 'Опубликована', // Черновик / Предпросмотр / Опубликована
+      draftFormula: '',
+      lastPreviewFormula: null,
+      previewSymbol: null,
+      chart: null,
+      series: null,
+      isChartLoading: false
+    };
+  },
+  computed: {
+    selectedPair() {
+      return this.pairs.find(p => p.id === this.selectedPairId) || null;
+    },
+    hasUnappliedChanges() {
+      if (this.editingStatus === 'Опубликована') return false;
+      return this.draftFormula !== this.lastPreviewFormula;
+    },
+    chartSymbolToShow() {
+      if (!this.selectedPair) return null;
+      if (this.editingStatus === 'Предпросмотр' && this.previewSymbol) {
+        return this.previewSymbol;
+      }
+      return this.selectedPair.symbol || null;
+    }
+  },
+  methods: {
+    initChart() {
+      const container = document.getElementById('chart');
+      if (!container) return;
+
+      if (
+        typeof window.LightweightCharts === 'undefined' ||
+        typeof window.LightweightCharts.createChart !== 'function'
+      ) {
+        console.error('LightweightCharts не инициализировался или нет createChart');
+        return;
+      }
+
+      this.chart = window.LightweightCharts.createChart(container, {
+        layout: {
+          background: { color: '#020617' },
+          textColor: '#e5e7eb'
+        },
+        rightPriceScale: {
+          borderColor: '#1f2937'
+        },
+        timeScale: {
+          borderColor: '#1f2937'
+        },
+        grid: {
+          vertLines: { color: '#111827' },
+          horzLines: { color: '#111827' }
+        },
+        crosshair: {
+          mode: window.LightweightCharts.CrosshairMode.Normal
+        }
+      });
+
+      if (!this.chart || typeof this.chart.addLineSeries !== 'function') {
+        console.error('chart.addLineSeries отсутствует, проверь версию lightweight-charts');
+        return;
+      }
+
+      this.series = this.chart.addLineSeries();
+    },
+    async loadChartData(symbol) {
+      if (!this.chart || !this.series || !symbol) return;
+      this.isChartLoading = true;
+      try {
+        const url = `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=15m&limit=200`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        const mapped = data.map(k => ({
+          time: Math.floor(k[0] / 1000),
+          value: parseFloat(k[4])
+        }));
+        this.series.setData(mapped);
+      } catch (e) {
+        console.error('Ошибка загрузки данных графика', e);
+      } finally {
+        this.isChartLoading = false;
+      }
+    },
+    selectPair(id) {
+      this.selectedPairId = id;
+      if (this.selectedPair) {
+        this.editingStatus = 'Опубликована';
+        this.draftFormula = this.selectedPair.formula;
+        this.lastPreviewFormula = this.selectedPair.formula;
+        this.previewSymbol = null;
+      }
+      // график обновится через watcher chartSymbolToShow
+    },
+    addPair() {
+      const newId = this.pairs.length
+        ? Math.max(...this.pairs.map(p => p.id)) + 1
+        : 1;
+      const newPair = {
+        id: newId,
+        title: 'Новая связка ' + newId,
+        status: 'Отключена',
+        formula: '',
+        symbol: ''
+      };
+      this.pairs.push(newPair);
+      this.selectedPairId = newId;
+      // сразу режим Черновик и редактируемая формула
+      this.editingStatus = 'Черновик';
+      this.draftFormula = '';
+      this.lastPreviewFormula = null;
+      this.previewSymbol = null;
+    },
+    startEditing() {
+      if (!this.selectedPair) return;
+      this.editingStatus = 'Черновик';
+      this.draftFormula = this.selectedPair.formula;
+      this.lastPreviewFormula = this.selectedPair.formula;
+      this.previewSymbol = null;
+    },
+    applyPreview() {
+      if (!this.selectedPair) return;
+      if (!this.hasUnappliedChanges) return;
+
+      const idx = Math.floor(Math.random() * this.randomTickers.length);
+      this.previewSymbol = this.randomTickers[idx];
+      this.lastPreviewFormula = this.draftFormula;
+      this.editingStatus = 'Предпросмотр';
+      // график обновится через watcher
+    },
+    discardDraft() {
+      if (!this.selectedPair) return;
+      this.editingStatus = 'Опубликована';
+      this.draftFormula = this.selectedPair.formula;
+      this.lastPreviewFormula = this.selectedPair.formula;
+      this.previewSymbol = null;
+    },
+    publishDraft() {
+      if (!this.selectedPair) return;
+
+      if (this.selectedPair.status === 'Онлайн') {
+        const ok = window.confirm(
+          'Связка сейчас в онлайне. Предыдущая формула и символ графика будут перезаписаны. Продолжить?'
+        );
+        if (!ok) return;
+      }
+
+      this.selectedPair.formula = this.draftFormula;
+      if (this.previewSymbol) {
+        this.selectedPair.symbol = this.previewSymbol;
+      }
+      this.editingStatus = 'Опубликована';
+      this.lastPreviewFormula = this.draftFormula;
+      this.previewSymbol = null;
+    },
+    startPair() {
+      if (!this.selectedPair) return;
+      this.selectedPair.status = 'Онлайн';
+    }
+  },
+  mounted() {
+    this.initChart();
+    if (this.selectedPair) {
+      this.draftFormula = this.selectedPair.formula;
+      this.lastPreviewFormula = this.selectedPair.formula;
+    }
+    if (this.chartSymbolToShow) {
+      this.loadChartData(this.chartSymbolToShow);
+    }
+  },
+  watch: {
+    chartSymbolToShow(newSymbol, oldSymbol) {
+      if (newSymbol && newSymbol !== oldSymbol) {
+        this.loadChartData(newSymbol);
+      }
+    },
+    draftFormula(newVal, oldVal) {
+      if (
+        this.editingStatus === 'Предпросмотр' &&
+        newVal !== this.lastPreviewFormula
+      ) {
+        this.editingStatus = 'Черновик';
+      }
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
